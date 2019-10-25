@@ -4,7 +4,8 @@
 #include <Stream.h>
 #include <WiFiManager.h>
 #include <Task.h>
-#include "ntp.h"
+// #include "ntp.h"
+#include <ezTime.h>
 
 const int SER = 0;
 const int CLK = 5;
@@ -34,18 +35,11 @@ const int digitOn = LOW;
 const int ledOff = HIGH;
 const int ledOn = LOW;
 
-// bool 12HourMode = true;
-
-int prev = 0;
-int count = 1520;
-int hours = 15;
-int mins = 20;
-int seconds = 0;
-int mils = 0;
+bool twelveHourMode = true;
 
 TaskManager taskManager;
+Timezone myTz;
 
-NTP ntp;
 
 // TODO: PROGMEM? pgm_read_word_near
 const int digits[10] = {
@@ -90,9 +84,16 @@ void setup()
   Serial.println(F("Starting..."));
 
   WiFiManager wifiManager;
-  wifiManager.autoConnect("aw-clock", "xxx1234");
+  String ssid = "aw-clock-" + ESP.getChipId();
+  wifiManager.autoConnect(ssid.c_str(), "xxx1234");
 
-  taskManager.StartTask(&ntp);
+  setDebug(INFO);
+  waitForSync();
+
+  // Set timezone
+  myTz.setLocation("America/New_York");
+
+  // taskManager.StartTask(&ntp);
 }
 
 void clockTick(int clk, int rclk)
@@ -139,7 +140,9 @@ void sendDigit(const int num, const bool dp, const int pin)
 
 void sendNumber(const int fullNum)
 {
-  int twhour = fullNum >= 1300 ? fullNum % 1200 : fullNum;
+  int seconds = myTz.second();
+  bool showTHMdot = twelveHourMode ? fullNum >= 1200 : false;
+  int twhour = twelveHourMode && fullNum >= 1300 ? fullNum % 1200 : fullNum;
 
   int showZero = 0;
   int tmp = (twhour / 1000) % 10;
@@ -153,7 +156,7 @@ void sendNumber(const int fullNum)
   if (showZero || tmp > 0)
   {
     showZero = 1;
-    sendDigit(tmp, fullNum >= 1200, DIGIT_3);
+    sendDigit(tmp, showTHMdot, DIGIT_3);
   }
 
   tmp = (fullNum / 10) % 10;
@@ -167,39 +170,19 @@ void sendNumber(const int fullNum)
   if (tmp >= 0)
   {
     showZero = 1;
-    sendDigit(tmp, ntp.state == 1, DIGIT_1);
+    sendDigit(tmp, seconds % 2 == 1, DIGIT_1);
   }
 }
 
 void loop()
 {
   taskManager.Loop();
-  digitalWrite(LED, ntp.seconds % 2 == 1 ? ledOn : ledOff);
+  events();
+  digitalWrite(LED, myTz.second() % 2 == 1 ? ledOn : ledOff);
 
-  count = ntp.hours * 100 + ntp.mins;
+  int count = myTz.hour() * 100 + myTz.minute();
 
-  // put your main code here, to run repeatedly:
   sendNumber(count);
 
-  // Serial debugging
-  if (Serial.available() > 0)
-  {
-    digitalWrite(LED, ledOn);
-    // int n = Serial.read();
-    // long n = Serial.parseInt();
-    String s = Serial.readString();
-    Serial.println(s);
-    if (s.startsWith("set "))
-    {
-
-      s = s.substring(4);
-      Serial.println(s);
-      long n = s.toInt();
-      hours = n / 100;
-      mins = n % 100;
-      seconds = 0;
-    }
-    // long n = s.toInt();
-    digitalWrite(LED, ledOff);
-  }
+  
 }

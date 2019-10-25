@@ -34,7 +34,7 @@ const int digitOn = LOW;
 const int ledOff = HIGH;
 const int ledOn = LOW;
 
-bool 12HourMode = true;
+// bool 12HourMode = true;
 
 int prev = 0;
 int count = 1520;

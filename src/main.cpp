@@ -34,6 +34,8 @@ const int digitOn = LOW;
 const int ledOff = HIGH;
 const int ledOn = LOW;
 
+bool 12HourMode = true;
+
 int prev = 0;
 int count = 1520;
 int hours = 15;
@@ -45,6 +47,7 @@ TaskManager taskManager;
 
 NTP ntp;
 
+// TODO: PROGMEM? pgm_read_word_near
 const int digits[10] = {
     A | B | C | D | E | F,
     B | C,
@@ -87,7 +90,7 @@ void setup()
   Serial.println(F("Starting..."));
 
   WiFiManager wifiManager;
-  wifiManager.autoConnect("aw-clock", "notlob");
+  wifiManager.autoConnect("aw-clock", "xxx1234");
 
   taskManager.StartTask(&ntp);
 }
